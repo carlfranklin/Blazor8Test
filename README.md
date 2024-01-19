@@ -247,7 +247,6 @@ Now remove the "Global" feature in *App.razor*:
 </head>
 
 <body>
-    <!-- Turn off pre-rendering -->
     <Routes />
     <script src="_framework/blazor.web.js"></script>
 </body>
