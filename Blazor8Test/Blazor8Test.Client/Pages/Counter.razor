@@ -1,15 +1,12 @@
 ﻿@page "/counter"
-@rendermode InteractiveAuto
+@rendermode InteractiveServer
 
 <PageTitle>Counter</PageTitle>
 
 <h1>Counter Render Mode @renderMode</h1>
 
-@if (AppState != null)
-{
-    <p role="status">Current count: @AppState.Count</p>
-    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-}
+<p role="status">Current count: @AppState.Count</p>
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
 @code {
 
@@ -21,10 +18,7 @@
 
     private void IncrementCount()
     {
-        if (AppState != null)
-        { 
-            AppState.Count++;
-        }
+        AppState.Count++;
     }
 
     protected override void OnAfterRender(bool firstRender)
