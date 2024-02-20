@@ -1,111 +1,60 @@
-# Using per page/component render modes, cascading parameters turn null after rendering.
+# .NET 8 Blazor Web App in Global Auto Mode Now Working Correctly
 
-This is a .NET 8 Blazor Web App with the Interactive Render Mode set to Server, and the Interactivity Location set to Global.
+After upgrading Visual Studio to version 17.9.0, the following app renders correctly.
 
-This is my version info:
+This issue is documented on GitHub at https://github.com/dotnet/aspnetcore/issues/52154
 
-```
-Microsoft Visual Studio Professional 2022
-Version 17.8.5
-VisualStudio.17.Release/17.8.5+34511.84
-Microsoft .NET Framework
-Version 4.8.09037
+The problem was that when using Auto Render mode with Global interactivity, the page would be unresponsive until the WebAssembly bits had been downloaded. This little glitch rendered Auto Render mode to become irrelevant, because the behavior was exactly like WebAssembly Render mode. In other words, the Blazor Server mechanism never kicked in.
 
-Installed Version: Professional
+I have published this project on Azure, and you can run it at https://blazor8test.azurewebsites.net
 
-ASP.NET and Web Tools   17.8.358.6298
-ASP.NET and Web Tools
+Navigate to the Counter page. The render mode is shown as either **SSR**, **Server**, or **Wasm**.
 
-Azure App Service Tools v3.0.0   17.8.358.6298
-Azure App Service Tools v3.0.0
+This is how I built the app. First, *Program.cs* on the server side.
 
-Azure Functions and Web Jobs Tools   17.8.358.6298
-Azure Functions and Web Jobs Tools
+*Program.cs:*
 
-C# Tools   4.8.0-7.23572.1+7b75981cf3bd520b86ec4ed00ec156c8bc48e4eb
-C# components used in the IDE. Depending on your project type and settings, a different version of the compiler may be used.
+```c#
+using Blazor8Test.Client.Pages;
+using Blazor8Test.Components;
 
-Common Azure Tools   1.10
-Provides common services for use by Azure Mobile Services and Microsoft Azure Tools.
+var builder = WebApplication.CreateBuilder(args);
 
-DevExpress Dashboard Extension   1.4
-A Visual Studio extension that invokes the Dashboard Designer editor.
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents()
+    .AddInteractiveWebAssemblyComponents();
 
-DevExpress Reporting Extension   1.4
-A Visual Studio extension that invokes the Report Designer editor for report definition VSREPX files.
+var app = builder.Build();
 
-DevExpress Reporting Tools Extension   1.0
-Extends Visual Studio with tools required for the Report Designer editor.
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
 
-DevExpress VSDesigner NETFramework Package   1.0
-A Visual Studio extension that invokes the Report and Dashboard designer editors.
+app.UseHttpsRedirection();
 
-DevExpress.DeploymentTool   1.0
-A useful tool for deploying DevExpress assemblies.
+app.UseStaticFiles();
+app.UseAntiforgery();
 
-DevExpress.Win.LayoutAssistant Extension   1.0
-DevExpress.Win.LayoutAssistant Visual Studio Extension Detailed Info
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(Blazor8Test.Client._Imports).Assembly);
 
-Extensibility Message Bus   1.4.39 (main@e8108eb)
-Provides common messaging-based MEF services for loosely coupled Visual Studio extension components communication and integration.
-
-GitHub Copilot   1.149.0.0 (v1.149.0.0@9a0f75deb)
-GitHub Copilot is an AI pair programmer that helps you write code faster and with less work.
-
-GitHub Copilot Agent   1.149.0
-
-Microsoft JVM Debugger   1.0
-Provides support for connecting the Visual Studio debugger to JDWP compatible Java Virtual Machines
-
-Mono Debugging for Visual Studio   17.8.17 (957fbed)
-Support for debugging Mono processes with Visual Studio.
-
-NuGet Package Manager   6.8.0
-NuGet Package Manager in Visual Studio. For more information about NuGet, visit https://docs.nuget.org/
-
-Razor (ASP.NET Core)   17.8.3.2405201+d135dd8d2ec1c2fbdee220e8656b308694e17a4b
-Provides languages services for ASP.NET Core Razor.
-
-SQL Server Data Tools   17.8.120.1
-Microsoft SQL Server Data Tools
-
-TypeScript Tools   17.0.20920.2001
-TypeScript Tools for Microsoft Visual Studio
-
-Visual Basic Tools   4.8.0-7.23572.1+7b75981cf3bd520b86ec4ed00ec156c8bc48e4eb
-Visual Basic components used in the IDE. Depending on your project type and settings, a different version of the compiler may be used.
-
-Visual F# Tools   17.8.0-beta.23475.2+10f956e631a1efc0f7f5e49c626c494cd32b1f50
-Microsoft Visual F# Tools
-
-Visual Studio IntelliCode   2.2
-AI-assisted development for Visual Studio.
-
-VisualStudio.DeviceLog   1.0
-Information about my package
-
-VisualStudio.Mac   1.0
-Mac Extension for Visual Studio
-
-VSPackage Extension   1.0
-VSPackage Visual Studio Extension Detailed Info
-
-Xamarin   17.8.0.157 (d17-8@8e82278)
-Visual Studio extension to enable development for Xamarin.iOS and Xamarin.Android.
-
-Xamarin Designer   17.8.3.6 (remotes/origin/d17-8@eccf46a291)
-Visual Studio extension to enable Xamarin Designer tools in Visual Studio.
-
-Xamarin.Android SDK   13.2.2.0 (d17-5/45b0e14)
-Xamarin.Android Reference Assemblies and MSBuild support.
-    Mono: d9a6e87
-    Java.Interop: xamarin/java.interop/d17-5@149d70fe
-    SQLite: xamarin/sqlite/3.40.1@68c69d8
-    Xamarin.Android Tools: xamarin/xamarin-android-tools/d17-5@ca1552d
-
+app.Run();
 ```
 
-In *App.razor*, I have disabled pre-rendering, but it also fails with pre-rendering on.
+This is typical of a Blazor Web App with Auto mode.
+
+Next, the *App.razor* file ensures that the render mode will be global:
 
 ```html
 <!DOCTYPE html>
@@ -119,25 +68,30 @@ In *App.razor*, I have disabled pre-rendering, but it also fails with pre-render
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="Blazor8Test.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet @rendermode="@InteractiveServer" />
+    <HeadOutlet @rendermode="InteractiveAuto" />
 </head>
 
 <body>
-    <!-- Turn off pre-rendering -->
-    <Routes @rendermode="@(new InteractiveServerRenderMode(false))" />
+    <Routes @rendermode="InteractiveAuto" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
 ```
 
-I have a component in the client project called *CascadingAppState.razor*:
+The `@rendermode` attribute ensures global rendering.
+
+Next, I created a Cascading AppState component in the client project.
+
+*CascadingAppState.razor*:
 
 ```xml
 <CascadingValue Value="this">
     @ChildContent
 </CascadingValue>
 ```
+
+*CascadingAppState.razor.cs*:
 
 ```c#
 using Microsoft.AspNetCore.Components;
@@ -162,7 +116,9 @@ public partial class CascadingAppState : ComponentBase
 }
 ```
 
-I have modified *Routes.razor* as follows:
+In *Routes.razor*, I encapsulated the app in my CascadingAppState component:
+
+*Routes.razor*:
 
 ```xml
 <CascadingAppState>
@@ -175,7 +131,9 @@ I have modified *Routes.razor* as follows:
 </CascadingAppState>
 ```
 
-I have implemented `CascadingAppState` in *Counter.razor*:
+Next, I modified *Counter.razor* to show the render mode and use the CascadingAppState parameter.
+
+*Counter.razor*:
 
 ```c#
 @page "/counter"
@@ -211,59 +169,40 @@ I have implemented `CascadingAppState` in *Counter.razor*:
 }
 ```
 
-Note that I am also showing the current render mode: SSR, Server, or WASM.
+When you run this app and navigate to the Counter page. 
 
-## Behavior
+The app should load immediately, and the Counter page should show the initial render mode as **Server**.
 
-Run the app and navigate to the Counter page. It works as advertised
+It will remain in **Server** mode until you refresh the page.
 
-![image-20240119085526314](images/image-20240119085526314.png)
+At that time you will first see the render mode as **SSR** (server-side rendering) because of the pre-rendering stage. After a few seconds it will update to **Wasm**.
 
-![image-20240119085431751](images/image-20240119085431751.png)
+## Testing
 
-Increment the counter, navigate to Home and back. The value persists because of the Cascading App State:
+To test, navigate to https://blazor8test.azurewebsites.net/ in your browser.
 
-![image-20240119085520380](images/image-20240119085520380.png)
+Bring up the dev tools and select **Application**, and then expand **Cache storage** under **Storage**. You will most likely see the WebAssembly files in there.
 
-![image-20240119085526314](images/image-20240119085526314.png)
+![image-20240220062300092](images/image-20240220062300092.png)
 
-![image-20240119085520380](images/image-20240119085520380.png)
+Navigate to the Counter page.
 
-Now remove the "Global" feature in *App.razor*:
+Now, right-click on **dotnet-resources** and select **Delete**.
 
-```xml
-<!DOCTYPE html>
-<html lang="en">
+![image-20240220062558423](images/image-20240220062558423.png)
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/" />
-    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="Blazor8Test.styles.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
-</head>
+Your screen should look like this:
 
-<body>
-    <Routes />
-    <script src="_framework/blazor.web.js"></script>
-</body>
+![image-20240220062637922](images/image-20240220062637922.png)
 
-</html>
-```
+Now right-click on the browser refresh button and select **Empty Cache and Hard Reload**:
 
-And add this line on line 2 of *Counter.razor*:
+<img src="images/image-20240220062755930.png" alt="image-20240220062755930" style="zoom:80%;" />
 
-```c#
-@rendermode InteractiveServer
-```
+As the Wasm files are downloading, you will see the render mode is **SSR**:
 
-Run it again
+![image-20240220062920154](images/image-20240220062920154.png)
 
-![image-20240119085526314](images/image-20240119085526314.png)
+Once all the files have been loaded, the render mode switches to **Wasm**:
 
-Upon navigation, you get a Null Reference Exception on AppState:
-
-![image-20240119085842892](images/image-20240119085842892.png)
+![image-20240220062950829](images/image-20240220062950829.png)
